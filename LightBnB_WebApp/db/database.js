@@ -100,25 +100,51 @@ const getAllReservations = function(guest_id, limit = 10) {
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = (options, limit = 10) => {
-  /*gary's code below
+    // params to give to .query later
+    const queryParams = [];
 
-  trick with where 1=1, selects all! when you don't have a where
-  */
-  // const sql = `SELECT properties.*, AVG(property_reviews.rating) as average_rating
-  // FROM properties
-  // LEFT JOIN property_reviews ON properties.id = property_id 
-  // WHERE 1=1`;
+    // string to give to .query later
+    let queryString = `
+    SELECT properties.*, avg(property_reviews.rating) as average_rating
+    FROM properties
+    JOIN property_reviews ON properties.id = property_id
+    `;
+  
+    // city
+    if (options.city) {
+      queryParams.push(`%${options.city}%`);
+      queryString += `WHERE city LIKE $${queryParams.length} `;
+    }
+  
+    // limit
+    queryParams.push(limit);
+    queryString += `
+    GROUP BY properties.id
+    ORDER BY cost_per_night
+    LIMIT $${queryParams.length};
+    `;
 
-  return pool
-    .query(`SELECT * FROM properties LIMIT $1`, [limit])
-    .then((result) => {
-      console.log(result.rows);
-      return result.rows;
-    })
-    .catch((err) => {
-      console.log(err.message);
-    });
-};
+    // owner
+    if (options.owner_id) {
+      queryParams.push(options.owner_id);
+      queryString += `WHERE reservations.owner_id = $${queryParams.length} `;
+    }
+
+    // price
+    if (minimum_price_per_night && maximum_price_per_night) {
+      queryParams.push(`${options.minimum_price_per_night}`);
+      queryString += `WHERE cost_per_night > $${queryParams.length} `;
+      queryParams.push(`${options.maximum_price_per_night}`);
+      queryString += `AND cost_per_night < $${queryParams.length} `;
+    }
+
+  
+    // check
+    console.log(queryString, queryParams);
+  
+    // return
+    return pool.query(queryString, queryParams).then((res) => res.rows);
+  };
 
 /**
  * Add a property to the database
