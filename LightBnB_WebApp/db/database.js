@@ -108,46 +108,48 @@ const getAllProperties = (options, limit = 10) => {
   SELECT properties.*, avg(property_reviews.rating) as average_rating
   FROM properties
   JOIN property_reviews ON properties.id = property_id
-  WHERE 1=1
-  `;
+  WHERE 1=1`;
 
-  // city
+  // city option
   if (options.city) {
     queryParams.push(`%${options.city}%`);
-    queryString += `AND city LIKE $${queryParams.length} `;
+    queryString += `
+  AND city LIKE $${queryParams.length} `;
   }
 
-  // owner
+  // owner option
   if (options.owner_id) {
     queryParams.push(options.owner_id);
-    queryString += `AND properties.owner_id = $${queryParams.length} `;
+    queryString += `
+  AND properties.owner_id = $${queryParams.length} `;
   }
 
-  // price
+  // price option
   if (options.minimum_price_per_night && options.maximum_price_per_night) {
     queryParams.push(options.minimum_price_per_night * 100);
-    queryString += `AND cost_per_night >= $${queryParams.length} `;
+    queryString += `
+  AND cost_per_night >= $${queryParams.length} `;
     queryParams.push(options.maximum_price_per_night * 100);
-    queryString += `AND cost_per_night <= $${queryParams.length} `;
+    queryString += `
+  AND cost_per_night <= $${queryParams.length} `;
   }
 
   queryString += `
   GROUP BY properties.id `
 
-  // minimum rating
+  // minimum rating option
   if (options.minimum_rating) {
     queryParams.push(options.minimum_rating);
-    queryString += `HAVING avg(property_reviews.rating) >= $${queryParams.length} `
+    queryString += `
+  HAVING avg(property_reviews.rating) >= $${queryParams.length} `
   }
 
   // limit
   queryParams.push(limit);
-  queryString += `ORDER BY cost_per_night
+  queryString += `
+  ORDER BY cost_per_night
   LIMIT $${queryParams.length};
   `;
-
-  // check
-  console.log(queryString, queryParams);
 
   // return
   return pool.query(queryString, queryParams).then((res) => res.rows);
@@ -161,9 +163,10 @@ const getAllProperties = (options, limit = 10) => {
 const addProperty = function(property) {
   return pool
     .query(`INSERT INTO properties (owner_id, title, description, thumbnail_photo_url, cover_photo_url, cost_per_night, parking_spaces, number_of_bathrooms, number_of_bedrooms, country, street, city, province, post_code)
-    VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *;`, 
-    [property.owner_id, property.title, property.description, property.thumbnail_photo_url, property.cover_photo_url, property.cost_per_night, property.parking_spaces, property.number_of_bathrooms, property.number_of_bedrooms, property.country, property.street, property.city, property.province, property.post_code])
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *;`,
+      [property.owner_id, property.title, property.description, property.thumbnail_photo_url, 
+        property.cover_photo_url, property.cost_per_night, property.parking_spaces, property.number_of_bathrooms, 
+        property.number_of_bedrooms, property.country, property.street, property.city, property.province, property.post_code])
     .then((result) => {
       return result.rows[0];
     })
